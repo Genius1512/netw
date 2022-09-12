@@ -1,6 +1,9 @@
+use std::borrow::BorrowMut;
 use std::error::Error;
+use std::io::{Read, Write};
 use std::net::{Ipv4Addr, TcpStream};
 use std::str::FromStr;
+use crate::NetwError;
 
 pub struct Client {
     current_ip: Option<Ipv4Addr>,
@@ -28,6 +31,13 @@ impl Client {
             self.current_ip.unwrap().to_string(),
             self.current_port.unwrap(),
         ))?);
+
+        let mut buf: [u8; 1] = [0u8; 1];
+        self.stream.as_mut().unwrap().read(&mut buf)?;
+        if buf != [0] {
+            return Err(Box::new(NetwError::new("Server did not return success")));
+        }
+        self.stream.as_ref().unwrap().write(&[0])?;
 
         Ok(())
     }

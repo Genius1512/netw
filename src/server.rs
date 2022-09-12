@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::io::{Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::str::FromStr;
+use crate::NetwError;
 
 pub struct Server {
     ip: Ipv4Addr,
@@ -22,8 +24,6 @@ impl Server {
     /// # Panics
     /// - When given an invalid ip address, as it is converted to a std::net::Ipv4Addr
     pub fn new(ip: &str, port: u16) -> Result<Server, Box<dyn Error>> {
-        println!("{}:{}", ip, port);
-
         Ok(Server {
             ip: Ipv4Addr::from_str(ip).unwrap(),
             port,
@@ -43,7 +43,13 @@ impl Server {
             return Err(Box::new(crate::NetwError::new("ID is already in use")));
         }
 
-        let (connection, addr) = self.listener.accept()?;
+        let (mut connection, addr) = self.listener.accept()?;
+        connection.write(&[0])?;
+        let mut buf: [u8; 1] = [0u8; 1];
+        connection.read(&mut buf)?;
+        if buf != [0] {
+            return Err(Box::new(NetwError::new("Client did not return success")));
+        }
 
         self.connections.insert(
             id.to_string(),
